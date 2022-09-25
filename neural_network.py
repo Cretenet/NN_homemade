@@ -2,49 +2,55 @@ import numpy as np
 import activation_functions as af
 
 class neural_network:
+    """
+    The neural_network class allows the user to create, train, and use an artificial neural network.
+    The layers must be created in the right order, the input layer is automatically created.
+    The user can create n hidden layers by calling n times add_hidden_layer().
+    The user must create an output layer as last layer with add_output_layer().
+    """
 
     def __init__(self, input_size, input_layer_name='input_layer'):
-       self.L = 1 # Number of layers
-       self.layers_size = [input_size] # Size of each layer
+       self.nbLayers = 1
+       self.layers_size = [input_size]
        self.input_size = input_size
-       self.names = [input_layer_name] # Name of each layer
-       self.activation_functions = [] # Activation function of each layer
-       self.output_layer_exists = False # Is there already an output layer?
-       self.weights = {} # Weights of each new layer
+       self.names = [input_layer_name]
+       self.choice_activation_functions = []
+       self.output_layer_exists = False
+       self.weights = {}
        self.biases = {}
-       self.sigma = {}
-       self.del_sigma = {}
-       self.dell_delb = {}
-       self.dell_delw = {}
+       self.activation = {}
+       self.derivative_activation = {}
+       self.dell_delb = {} # Gradient of the loss function w.r.t the biases
+       self.dell_delw = {} # Gradient of the loss function w.r.t the weights
 
     def add_hidden_layer(self, name, nb_neurons=1, activation_function = 'RELU'):
         if not self.output_layer_exists:
-            self.L += 1
+            self.nbLayers += 1
             self.layers_size.append(nb_neurons)
             self.names.append(name)
-            self.initialize_weights(activation_function, self.L-2, self.layers_size[self.L-2], nb_neurons)
+            self.initialize_weights(activation_function, self.nbLayers-2, self.layers_size[self.nbLayers-2], nb_neurons)
             if activation_function =='RELU' or activation_function == 'sigmoid' or activation_function=='tanh':
-                self.activation_functions.append(activation_function)
+                self.choice_activation_functions.append(activation_function)
             else :
-                self.activation_functions.append('RELU')
+                self.choice_activation_functions.append('RELU')
                 print('The chosen activation function is not supported, RELU is used instead.')
         else :
             print('It is not possible to add a hidden layer after the output layer.' \
             'The layers must be added in the right order.')
 
     def add_output_layer(self, name='output_layer', nb_outputs=1, activation_function = 'sigmoid'):
-        if self.L == 1:
+        if self.nbLayers == 1:
             print('There must be at least one hidden layer before putting the output layer.')
         else :
             self.output_layer_exists = True
-            self.L += 1
+            self.nbLayers += 1
             self.layers_size.append(nb_outputs)
             self.names.append(name)
-            self.initialize_weights(activation_function, self.L-2, self.layers_size[self.L-2], nb_outputs)
+            self.initialize_weights(activation_function, self.nbLayers-2, self.layers_size[self.nbLayers-2], nb_outputs)
             if activation_function =='RELU' or activation_function == 'sigmoid' or activation_function=='tanh':
-                self.activation_functions.append(activation_function)
+                self.choice_activation_functions.append(activation_function)
             else :
-                self.activation_functions.append('sigmoid')
+                self.choice_activation_functions.append('sigmoid')
                 print('The chosen activation function is not supported, sigmoid is used instead.')
 
     def initialize_weights(self, activation_function, index, nb_first_layer, nb_second_layer):
@@ -57,13 +63,13 @@ class neural_network:
 
     def forward_propagation(self, input):
         first_layer=np.reshape(input,(len(input),1))
-        self.sigma[0] = first_layer
+        self.activation[0] = first_layer
         for i in range(0,len(self.names)-1) :
             W = self.weights[i]
-            second_layer = af.activation_function(W.dot(first_layer)+ self.biases[i], self.activation_functions[i])
+            second_layer = af.activation_function(W.dot(first_layer)+ self.biases[i], self.choice_activation_functions[i])
             # The following two lines are useful for backward propagation
-            self.sigma[i+1] = second_layer
-            self.del_sigma[i] = af.derivative_activation_function(W.dot(first_layer)+ self.biases[i], self.activation_functions[i])
+            self.activation[i+1] = second_layer
+            self.derivative_activation[i] = af.derivative_activation_function(W.dot(first_layer)+ self.biases[i], self.choice_activation_functions[i])
             first_layer = second_layer # Restart with the next one
         return second_layer
        
@@ -75,92 +81,48 @@ class neural_network:
 
     def backward_propagation(self, truth):
         truth = np.reshape(truth,(len(truth),1))
-        #print('---------------------------------------------')
-        index_left_layer = self.L-2
-        index_right_layer = self.L-1
+        index_left_layer = self.nbLayers-2
+        index_right_layer = self.nbLayers-1
         left_layer_size = self.layers_size[index_left_layer]
         right_layer_size = self.layers_size[index_right_layer]
-        self.dell_delw[self.L-2] = np.zeros((right_layer_size,left_layer_size))
-        #print(self.sigma[self.L-1])
-        self.dell_delw[self.L-2][0][0] = 2 * (self.sigma[self.L-1][0]-truth[0]) * self.del_sigma[self.L-2][0]*self.sigma[self.L-2][0]
-        #print(self.dell_delw[self.L-2][0][0])
-        #print((self.sigma[self.L-1][1]-truth[1]))
-        #print(self.del_sigma[self.L-2][1])
-        #print(self.sigma[self.L-2][0])
-        self.dell_delw[self.L-2][1][0] = 2 * (self.sigma[self.L-1][1]-truth[1]) * self.del_sigma[self.L-2][1]*self.sigma[self.L-2][0]
-        #print(self.dell_delw[self.L-2][1][0])
-        #print('LOOP :::::::::::::::::::::::::::::::::')
-        previous_dell_dela = 2* (self.sigma[self.L-1]-truth)
-        #print(self.sigma[self.L-1])
-        #print(truth)
-        #print(previous_dell_dela)
-        for l in range(0,self.L-1): # Loop over the layers
-            index_left_layer = self.L-2-l
-            index_right_layer = self.L-1-l
+        self.dell_delw[self.nbLayers-2] = np.zeros((right_layer_size,left_layer_size))
+        self.dell_delw[self.nbLayers-2][0][0] = 2 * (self.activation[self.nbLayers-1][0]-truth[0]) * self.derivative_activation[self.nbLayers-2][0]*self.activation[self.nbLayers-2][0]
+        self.dell_delw[self.nbLayers-2][1][0] = 2 * (self.activation[self.nbLayers-1][1]-truth[1]) * self.derivative_activation[self.nbLayers-2][1]*self.activation[self.nbLayers-2][0]
+        previous_dell_dela = 2* (self.activation[self.nbLayers-1]-truth)
+        for l in range(0,self.nbLayers-1): # Loop over the layers
+            index_left_layer = self.nbLayers-2-l
+            index_right_layer = self.nbLayers-1-l
             left_layer_size = self.layers_size[index_left_layer]
             right_layer_size = self.layers_size[index_right_layer]
-            self.dell_delw[self.L-2-l] = np.zeros((right_layer_size,left_layer_size))
-            self.dell_delb[self.L-2-l] = np.zeros((right_layer_size,1))
+            self.dell_delw[self.nbLayers-2-l] = np.zeros((right_layer_size,left_layer_size))
+            self.dell_delb[self.nbLayers-2-l] = np.zeros((right_layer_size,1))
             for j in range(0,right_layer_size):
-                #print(previous_dell_dela)
-                #print(self.del_sigma[self.L-2-l][j])
-                self.dell_delb[self.L-2-l][j][0]=previous_dell_dela[j] * self.del_sigma[self.L-2-l][j]
+                self.dell_delb[self.nbLayers-2-l][j][0]=previous_dell_dela[j] * self.derivative_activation[self.nbLayers-2-l][j]
                 for k in range(0,left_layer_size):
-                    #print('j : '+str(j))
-                    #print('k : '+str(k))
-                    self.dell_delw[self.L-2-l][j][k] = previous_dell_dela[j] * self.del_sigma[self.L-2-l][j]*self.sigma[self.L-2-l][k]
-                    #print(self.dell_delw[self.L-2-l][j][k])
-            #print(self.dell_delw[self.L-2][1][0])
+                    self.dell_delw[self.nbLayers-2-l][j][k] = previous_dell_dela[j] * self.derivative_activation[self.nbLayers-2-l][j]*self.activation[self.nbLayers-2-l][k]
             dell_dela=np.zeros((left_layer_size,1))
             for k in range(0,left_layer_size):
                 for j in range(0,right_layer_size):
-                    dell_dela[k][0] += self.weights[self.L-2-l][j][k]*self.del_sigma[self.L-2-l][j]*previous_dell_dela[j]
+                    dell_dela[k][0] += self.weights[self.nbLayers-2-l][j][k]*self.derivative_activation[self.nbLayers-2-l][j]*previous_dell_dela[j]
             previous_dell_dela = dell_dela
 
-
-        """print('tutu')
-        previous_dell_dela = 2 * self.sigma[self.L-2]-truth
-        for l in range(0,self.L-1): # Loop over the layers
-            justonce=True
-            left_layer_size = self.layers_size[self.L-2-l]
-            right_layer_size = self.layers_size[self.L-1-l]
-            layer_index = self.L-2-l
-            print(left_layer_size)
-            print(right_layer_size)
-            self.dell_delb[layer_index] = np.zeros((left_layer_size,1),dtype=np.float64)
-            self.dell_delw[layer_index] = np.zeros((left_layer_size,right_layer_size),dtype=np.float64)
-            print(self.dell_delw[layer_index])
-            print('left : '+str(left_layer_size)+' right : '+str(right_layer_size))
-            for k in range(0,right_layer_size):
-                print('k = '+str(k))
-                self.dell_delb[layer_index][k][0] = self.del_sigma[layer_index][k][0] * previous_dell_dela[k][0]
-                temp = 0
-                for j in range(0,left_layer_size):
-                    print('j = '+str(j))
-                    #temp += self.weights[layer_index][j][k] * self.del_sigma[layer_index][j]*previous_dell_dela[j]
-                    print(self.dell_delw[layer_index])
-                    print(previous_dell_dela[j][0])
-                    self.dell_delw[layer_index][j][k] = self.sigma[layer_index-1][k][0] * self.del_sigma[layer_index][k][0] \
-                        * previous_dell_dela[j][0]
-                previous_dell_dela[k] = temp
-                justonce=False"""
     def info(self):
         message = 'The fully connected artificial neural network is composed of :\n'
         message += '\t - An input layer named \"'+str(self.names[0])+'\" expecting '+ str(self.layers_size[0])+ \
             ' inputs.'
-        if self.L > 1:
+        if self.nbLayers > 1:
             if self.output_layer_exists:
-                for i in range(1,self.L-1): 
+                for i in range(1,self.nbLayers-1): 
                     message += '\n\t - A hidden layer named \"'+str(self.names[i])+'\", containing '+ \
-                        str(self.layers_size[i])+' neurons, and using the '+str(self.activation_functions[i-1])+ \
+                        str(self.layers_size[i])+' neurons, and using the '+str(self.choice_activation_functions[i-1])+ \
                         ' activation function.'
                 message += '\n\t - An output layer named \"'+str(self.names[-1])+'\", containing '+ \
-                    str(self.layers_size[-1])+' neurons, and using the '+str(self.activation_functions[-1])+\
+                    str(self.layers_size[-1])+' neurons, and using the '+str(self.choice_activation_functions[-1])+\
                     ' activation function.'
             else :
-                for i in range(1,self.L): 
+                for i in range(1,self.nbLayers): 
                     message += '\n\t - A hidden layer named \"'+str(self.names[i])+'\", containing '+\
-                        str(self.layers_size[i])+' neurons, and using the '+str(self.activation_functions[i-1])+\
+                        str(self.layers_size[i])+' neurons, and using the '+str(self.choice_activation_functions[i-1])+\
                         ' activation function.'
         message += '\n Now let us look at the different weight matrices :\n'
         print(message)

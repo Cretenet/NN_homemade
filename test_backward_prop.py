@@ -12,7 +12,7 @@ l1 = NN.evaluate(v1,[0.5,0.4])
 
 NN.backward_propagation(np.array([0.5,0.4]))
 ok = True
-for l in range(0,NN.L-1):
+for l in range(0,NN.nbLayers-1):
     for i in range(0,NN.weights[l].shape[0]):
         for j in range(0,NN.weights[l].shape[1]):
             NN.weights[l][i][j]+= epsilon
@@ -31,7 +31,7 @@ if ok: print('The backward propagation gives the same result as using finite dif
     ' an error of '+str(epsilon)+').')
 
 ok = True
-for l in range(0,NN.L-1):
+for l in range(0,NN.nbLayers-1):
     for i in range(0,len(NN.dell_delb[l])):
         NN.biases[l][i] += epsilon
         v2 = NN.forward_propagation(np.array([0.5,0.7]))
