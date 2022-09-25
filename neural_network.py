@@ -1,5 +1,3 @@
-from random import weibullvariate
-from unicodedata import name
 import numpy as np
 import activation_functions as af
 
@@ -13,7 +11,11 @@ class neural_network:
        self.activation_functions = [] # Activation function of each layer
        self.output_layer_exists = False # Is there already an output layer?
        self.weights = {} # Weights of each new layer
-       self.biases = np.array([])
+       self.biases = {}
+       self.sigma = {}
+       self.del_sigma = {}
+       self.dell_delb = {}
+       self.dell_delw = {}
 
     def add_hidden_layer(self, name, nb_neurons=1, activation_function = 'RELU'):
         if not self.output_layer_exists:
@@ -51,20 +53,97 @@ class neural_network:
         elif activation_function == 'tanh' or activation_function=='sigmoid':
             m=1
         self.weights[index] = np.random.normal(0,m/self.input_size,(nb_second_layer,nb_first_layer))
-        self.biases = np.append(self.biases, [0])
+        self.biases[index] = np.zeros((nb_second_layer,1))
 
     def forward_propagation(self, input):
         first_layer=np.reshape(input,(len(input),1))
+        self.sigma[0] = first_layer
         for i in range(0,len(self.names)-1) :
             W = self.weights[i]
             second_layer = af.activation_function(W.dot(first_layer)+ self.biases[i], self.activation_functions[i])
-            print(second_layer)
-            first_layer = second_layer
+            # The following two lines are useful for backward propagation
+            self.sigma[i+1] = second_layer
+            self.del_sigma[i] = af.derivative_activation_function(W.dot(first_layer)+ self.biases[i], self.activation_functions[i])
+            first_layer = second_layer # Restart with the next one
         return second_layer
-
+       
+ 
     def evaluate(self, prediction, truth):
+        prediction = np.reshape(prediction,(len(prediction),1))
+        truth = np.reshape(truth,(len(truth),1))
         return np.sum(np.square(prediction-truth)) # Sum of squares
 
+    def backward_propagation(self, truth):
+        truth = np.reshape(truth,(len(truth),1))
+        #print('---------------------------------------------')
+        index_left_layer = self.L-2
+        index_right_layer = self.L-1
+        left_layer_size = self.layers_size[index_left_layer]
+        right_layer_size = self.layers_size[index_right_layer]
+        self.dell_delw[self.L-2] = np.zeros((right_layer_size,left_layer_size))
+        #print(self.sigma[self.L-1])
+        self.dell_delw[self.L-2][0][0] = 2 * (self.sigma[self.L-1][0]-truth[0]) * self.del_sigma[self.L-2][0]*self.sigma[self.L-2][0]
+        #print(self.dell_delw[self.L-2][0][0])
+        #print((self.sigma[self.L-1][1]-truth[1]))
+        #print(self.del_sigma[self.L-2][1])
+        #print(self.sigma[self.L-2][0])
+        self.dell_delw[self.L-2][1][0] = 2 * (self.sigma[self.L-1][1]-truth[1]) * self.del_sigma[self.L-2][1]*self.sigma[self.L-2][0]
+        #print(self.dell_delw[self.L-2][1][0])
+        #print('LOOP :::::::::::::::::::::::::::::::::')
+        previous_dell_dela = 2* (self.sigma[self.L-1]-truth)
+        #print(self.sigma[self.L-1])
+        #print(truth)
+        #print(previous_dell_dela)
+        for l in range(0,self.L-1): # Loop over the layers
+            index_left_layer = self.L-2-l
+            index_right_layer = self.L-1-l
+            left_layer_size = self.layers_size[index_left_layer]
+            right_layer_size = self.layers_size[index_right_layer]
+            self.dell_delw[self.L-2-l] = np.zeros((right_layer_size,left_layer_size))
+            self.dell_delb[self.L-2-l] = np.zeros((right_layer_size,1))
+            for j in range(0,right_layer_size):
+                #print(previous_dell_dela)
+                #print(self.del_sigma[self.L-2-l][j])
+                self.dell_delb[self.L-2-l][j][0]=previous_dell_dela[j] * self.del_sigma[self.L-2-l][j]
+                for k in range(0,left_layer_size):
+                    #print('j : '+str(j))
+                    #print('k : '+str(k))
+                    self.dell_delw[self.L-2-l][j][k] = previous_dell_dela[j] * self.del_sigma[self.L-2-l][j]*self.sigma[self.L-2-l][k]
+                    #print(self.dell_delw[self.L-2-l][j][k])
+            #print(self.dell_delw[self.L-2][1][0])
+            dell_dela=np.zeros((left_layer_size,1))
+            for k in range(0,left_layer_size):
+                for j in range(0,right_layer_size):
+                    dell_dela[k][0] += self.weights[self.L-2-l][j][k]*self.del_sigma[self.L-2-l][j]*previous_dell_dela[j]
+            previous_dell_dela = dell_dela
+
+
+        """print('tutu')
+        previous_dell_dela = 2 * self.sigma[self.L-2]-truth
+        for l in range(0,self.L-1): # Loop over the layers
+            justonce=True
+            left_layer_size = self.layers_size[self.L-2-l]
+            right_layer_size = self.layers_size[self.L-1-l]
+            layer_index = self.L-2-l
+            print(left_layer_size)
+            print(right_layer_size)
+            self.dell_delb[layer_index] = np.zeros((left_layer_size,1),dtype=np.float64)
+            self.dell_delw[layer_index] = np.zeros((left_layer_size,right_layer_size),dtype=np.float64)
+            print(self.dell_delw[layer_index])
+            print('left : '+str(left_layer_size)+' right : '+str(right_layer_size))
+            for k in range(0,right_layer_size):
+                print('k = '+str(k))
+                self.dell_delb[layer_index][k][0] = self.del_sigma[layer_index][k][0] * previous_dell_dela[k][0]
+                temp = 0
+                for j in range(0,left_layer_size):
+                    print('j = '+str(j))
+                    #temp += self.weights[layer_index][j][k] * self.del_sigma[layer_index][j]*previous_dell_dela[j]
+                    print(self.dell_delw[layer_index])
+                    print(previous_dell_dela[j][0])
+                    self.dell_delw[layer_index][j][k] = self.sigma[layer_index-1][k][0] * self.del_sigma[layer_index][k][0] \
+                        * previous_dell_dela[j][0]
+                previous_dell_dela[k] = temp
+                justonce=False"""
     def info(self):
         message = 'The fully connected artificial neural network is composed of :\n'
         message += '\t - An input layer named \"'+str(self.names[0])+'\" expecting '+ str(self.layers_size[0])+ \
