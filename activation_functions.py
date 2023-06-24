@@ -21,8 +21,6 @@ def derivative_activation_function(matrix, name):
         return derivative_RELU(matrix)
     elif name == "tanh":
         return derivative_tanh(matrix)
-    elif name == "softmax":
-        return derivative_softmax(matrix)
     elif name == "identity":
         return derivative_identity(matrix)
 
@@ -61,15 +59,9 @@ def derivative_sigmoid(matrix):
 
 def derivative_RELU(matrix):
     derivative = np.zeros(np.shape(matrix))
-    derivative[np.where(matrix > 0)] = np.ones(
-        np.shape(derivative[np.where(matrix > 0)])
-    )
+    derivative[np.where(matrix > 0)] = 1
     return derivative
 
 
 def derivative_tanh(matrix):
     return 1.0 / (np.cosh(matrix) * np.cosh(matrix))
-
-
-def derivative_softmax(matrix):
-    return softmax(matrix) * (1 - softmax(matrix))
