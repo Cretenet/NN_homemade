@@ -92,6 +92,10 @@ class NeuralNetwork:
             raise ValueError("Input must be a numpy array")
         if input.ndim != 2:
             raise ValueError("Input array must be 2-dimensional")
+        if input.shape[0] != self.input_size:
+            raise ValueError(
+                "Input array must have as much rows as the input layer"
+            )
         # Start the propagation
         first_layer = input
         self.activation[0] = first_layer
@@ -107,12 +111,16 @@ class NeuralNetwork:
             first_layer = second_layer  # Restart with the next one
         return second_layer
 
-    def evaluation(self, prediction, truth):
-        prediction = np.reshape(prediction, (len(prediction), 1))
-        truth = np.reshape(truth, (len(truth), 1))
-        return np.sum(np.square(prediction - truth))  # Sum of squares
-
     def backward_propagation(self, truth):
+        # We first verify that the truth has the right format
+        if not isinstance(truth, np.ndarray):
+            raise ValueError("Input must be a numpy array")
+        if truth.ndim != 2:
+            raise ValueError("Input array must be 2-dimensional")
+        if truth.shape != self.activation[self.nbLayers].shape:
+            raise ValueError("Truth array must have the shape (nb_units, N)")
+
+    def backward_propagation2(self, truth):
         truth = np.reshape(truth, (len(truth), 1))
         index_left_layer = self.nbLayers - 2
         index_right_layer = self.nbLayers - 1

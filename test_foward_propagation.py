@@ -15,6 +15,11 @@ def test_bad_input():
         NN.forward_propagation([[0.5, -0.1], [0.7, 0.8]])
     with raises(ValueError, match="Input array must be 2-dimensional"):
         NN.forward_propagation(np.array([1, 2, 3]))
+    with raises(
+        ValueError,
+        match="Input array must have as much rows as the input layer",
+    ):
+        NN.forward_propagation(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
 
 
 def test_fixed_values():
