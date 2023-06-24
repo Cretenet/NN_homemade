@@ -87,20 +87,23 @@ class NeuralNetwork:
         self.biases[index] = np.zeros((nb_second_layer, 1))
 
     def forward_propagation(self, input):
-        first_layer = input.reshape((len(input), 1))
+        # We first verify that the input has the right format
+        if not isinstance(input, np.ndarray):
+            raise ValueError("Input must be a numpy array")
+        if input.ndim != 2:
+            raise ValueError("Input array must be 2-dimensional")
+        # Start the propagation
+        first_layer = input
         self.activation[0] = first_layer
-        for i in range(1, self.nbLayers + 1):
-            W = self.weights[i]
-            b = self.biases[i]
+        for layer in range(1, self.nbLayers + 1):
+            W = self.weights[layer]
+            b = self.biases[layer]
             z = W @ first_layer + b
             second_layer = af.activation_function(
-                z, self.activation_functions[i]
+                z, self.activation_functions[layer]
             )
-            # The following two lines are useful for backward propagation
-            self.activation[i] = second_layer
-            self.derivative_activation[i] = af.derivative_activation_function(
-                z, self.activation_functions[i]
-            )
+            # The following line is useful for backward propagation
+            self.activation[layer] = second_layer
             first_layer = second_layer  # Restart with the next one
         return second_layer
 
