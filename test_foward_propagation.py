@@ -1,10 +1,23 @@
 import numpy as np
+from pytest import raises
 
 from activation_functions import RELU, sigmoid, softmax, tanh
 from neural_network import NeuralNetwork
 
 
-def test_forward_propagation():
+def test_bad_input():
+    NN = NeuralNetwork(2, "input layer")
+    NN.add_hidden_layer("first hidden layer", 2, "RELU")
+    NN.add_output_layer("output layer", 1, "sigmoid")
+    with raises(ValueError, match="Input must be a numpy array"):
+        NN.forward_propagation("not a numpy array")
+    with raises(ValueError, match="Input must be a numpy array"):
+        NN.forward_propagation([[0.5, -0.1], [0.7, 0.8]])
+    with raises(ValueError, match="Input array must be 2-dimensional"):
+        NN.forward_propagation(np.array([1, 2, 3]))
+
+
+def test_fixed_values():
     NN = NeuralNetwork(2, "input layer")
     NN.add_hidden_layer("first hidden layer", 2, "RELU")
     NN.add_output_layer("output layer", 1, "sigmoid")
@@ -14,7 +27,7 @@ def test_forward_propagation():
     assert np.allclose(np.array([[0.5873448815653372, 0.5619303515188666]]), V)
 
 
-def test_forward_propagation_random():
+def test_large_random_network():
     NN = NeuralNetwork(256, "input layer")
     NN.add_hidden_layer("first hidden layer", 128, "RELU")
     NN.add_hidden_layer("second hidden layer", 64, "tanh")
