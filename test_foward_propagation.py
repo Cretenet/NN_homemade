@@ -37,7 +37,9 @@ def test_large_random_network():
     NN.add_hidden_layer(nb_neurons=128, activation="RELU")
     NN.add_hidden_layer(nb_neurons=64, activation="tanh")
     NN.add_hidden_layer(nb_neurons=32, activation="sigmoid")
-    NN.add_output_layer(cost="MSE", nb_outputs=5, activation="softmax")
+    NN.add_output_layer(
+        cost="cross_entropy", nb_outputs=5, activation="softmax"
+    )
     W1 = NN.weights[1]
     assert W1.shape == (128, 256)
     W2 = NN.weights[2]
