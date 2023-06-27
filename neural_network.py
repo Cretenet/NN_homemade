@@ -1,6 +1,7 @@
 import numpy as np
 
 import activation_functions as af
+import cost_functions as cf
 
 
 class NeuralNetwork:
@@ -12,7 +13,7 @@ class NeuralNetwork:
     output layer as last layer with add_output_layer().
     """
 
-    def __init__(self, input_size, input_layer_name="input_layer"):
+    def __init__(self, input_size: int, input_layer_name="input_layer"):
         self.nbLayers = 0  # By convention, the input layer is not counted
         self.layers_size = [input_size]
         self.input_size = input_size
@@ -22,17 +23,20 @@ class NeuralNetwork:
         self.weights = {}
         self.biases = {}
         self.activation = {}
+        self.Z = {}
         self.derivative_activation = {}
-        self.dl_db = {}  # Gradient of the loss function w.r.t the biases
-        self.dl_dw = {}  # Gradient of the loss function w.r.t the weights
+        self.db = {}  # Gradient of the loss function w.r.t the biases
+        self.dW = {}  # Gradient of the loss function w.r.t the weights
 
-    def add_hidden_layer(self, name, nb_neurons=1, activation_function="RELU"):
+    def add_hidden_layer(
+        self, nb_neurons: int, activation: str, name="hidden_layer"
+    ):
         if not self.output_layer_exists:
             self.nbLayers += 1
             self.layers_size.append(nb_neurons)
             self.names.append(name)
-            if activation_function in ["RELU", "sigmoid", "tanh", "softmax"]:
-                self.activation_functions.append(activation_function)
+            if activation in ["RELU", "sigmoid", "tanh", "softmax"]:
+                self.activation_functions.append(activation)
             else:
                 self.activation_functions.append("RELU")
                 print(
@@ -53,14 +57,15 @@ class NeuralNetwork:
             )
 
     def add_output_layer(
-        self, name="output_layer", nb_outputs=1, activation_function="sigmoid"
+        self, nb_outputs: int, activation: str, cost: str, name="output_layer"
     ):
+        self.cost_function = cost
         self.output_layer_exists = True
         self.nbLayers += 1
         self.layers_size.append(nb_outputs)
         self.names.append(name)
-        if activation_function in ["RELU", "sigmoid", "tanh", "softmax"]:
-            self.activation_functions.append(activation_function)
+        if activation in ["RELU", "sigmoid", "tanh", "softmax", "identity"]:
+            self.activation_functions.append(activation)
         else:
             self.activation_functions.append("softmax")
             print(
@@ -75,50 +80,97 @@ class NeuralNetwork:
         )
 
     def initialize_weights(
-        self, activation_function, index, nb_first_layer, nb_second_layer
+        self,
+        activation_function: str,
+        index: int,
+        nb_first_layer: int,
+        nb_second_layer: int,
     ):
         if activation_function == "RELU":
             m = 2
-        elif activation_function in ["sigmoid", "tanh", "softmax"]:
+        elif activation_function in ["sigmoid", "tanh", "softmax", "identity"]:
             m = 1
         self.weights[index] = np.random.normal(
             0, m / self.layers_size[0], (nb_second_layer, nb_first_layer)
         )
         self.biases[index] = np.zeros((nb_second_layer, 1))
 
-    def forward_propagation(self, input):
+    def forward_propagation(self, X: np.ndarray) -> np.ndarray:
         # We first verify that the input has the right format
-        if not isinstance(input, np.ndarray):
-            raise ValueError("Input must be a numpy array")
-        if input.ndim != 2:
-            raise ValueError("Input array must be 2-dimensional")
-        if input.shape[0] != self.input_size:
-            raise ValueError(
-                "Input array must have as much rows as the input layer"
-            )
+        if not isinstance(X, np.ndarray):
+            raise TypeError("X must be a numpy array")
+        if X.ndim != 2:
+            raise ValueError("X must be 2-dimensional")
+        if X.shape[0] != self.input_size:
+            raise ValueError("X must have as much rows as the input layer")
         # Start the propagation
-        first_layer = input
+        first_layer = X
         self.activation[0] = first_layer
         for layer in range(1, self.nbLayers + 1):
             W = self.weights[layer]
             b = self.biases[layer]
-            z = W @ first_layer + b
+            Z = W @ first_layer + b
             second_layer = af.activation_function(
-                z, self.activation_functions[layer]
+                Z, self.activation_functions[layer]
             )
             # The following line is useful for backward propagation
             self.activation[layer] = second_layer
+            self.Z[layer] = Z
             first_layer = second_layer  # Restart with the next one
         return second_layer
 
-    def backward_propagation(self, truth):
-        # We first verify that the truth has the right format
-        if not isinstance(truth, np.ndarray):
-            raise ValueError("Input must be a numpy array")
-        if truth.ndim != 2:
-            raise ValueError("Input array must be 2-dimensional")
-        if truth.shape != self.activation[self.nbLayers].shape:
-            raise ValueError("Truth array must have the shape (nb_units, N)")
+    def backward_propagation(self, Y: np.ndarray):
+        # We first verify that Y has the right format
+        if not isinstance(Y, np.ndarray):
+            raise TypeError("Y must be a numpy array")
+        if Y.ndim != 2:
+            raise ValueError("Y must be 2-dimensional")
+        if Y.shape != self.activation[self.nbLayers].shape:
+            raise ValueError("Y must have the shape (nb_units, N)")
+        # Initialize
+        Yhat = self.activation[self.nbLayers]
+        if (
+            self.activation_functions[-1] == "softmax"
+            and self.cost_function == "cross_entropy"
+        ) or (
+            self.activation_functions[-1] == "sigmoid"
+            and self.cost_function == "binary_cross_entropy"
+        ):
+            dZ = Yhat - Y
+        else:
+            dZ = af.derivative_activation_function(
+                Z=self.Z[self.nbLayers],
+                name=self.activation_functions[self.nbLayers],
+            ) * cf.derivative_cost_function(Y, Yhat, self.cost_function)
+        # Backward propagation
+        for layer in range(self.nbLayers, 0, -1):
+            m = dZ.shape[1]
+            self.db[layer] = (1 / m) * np.sum(dZ, axis=1, keepdims=True)
+            self.dW[layer] = (1 / m) * dZ @ self.activation[layer - 1].T
+            if layer > 1:
+                dZ = (
+                    self.weights[layer].T
+                    @ dZ
+                    * af.derivative_activation_function(
+                        Z=self.Z[layer - 1],
+                        name=self.activation_functions[layer - 1],
+                    )
+                )
+
+    def evaluate(self, Y: np.ndarray, Yhat: np.ndarray) -> float:
+        # We first verify that Y and Yhat have the right format
+        if not isinstance(Y, np.ndarray):
+            raise TypeError("Y must be a numpy array")
+        if not isinstance(Yhat, np.ndarray):
+            raise TypeError("Yhat must be a numpy array")
+        if Y.ndim != 2:
+            raise ValueError("Y must be 2-dimensional")
+        if Yhat.ndim != 2:
+            raise ValueError("Yhat must be 2-dimensional")
+        if Y.shape != Yhat.shape:
+            raise ValueError("Y and Yhat must have the same shape")
+        # Compute the cost
+        return cf.cost_function(Y, Yhat, self.cost_function)
 
     def backward_propagation2(self, truth):
         truth = np.reshape(truth, (len(truth), 1))

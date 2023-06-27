@@ -1,67 +1,68 @@
 import numpy as np
 
 
-def activation_function(matrix, name):
+def activation_function(Z, name):
     if name == "sigmoid":
-        return sigmoid(matrix)
+        return sigmoid(Z)
     elif name == "RELU":
-        return RELU(matrix)
+        return RELU(Z)
     elif name == "tanh":
-        return tanh(matrix)
+        return tanh(Z)
     elif name == "softmax":
-        return softmax(matrix)
+        return softmax(Z)
     elif name == "identity":
-        return identity(matrix)
+        return identity(Z)
 
 
-def derivative_activation_function(matrix, name):
+def derivative_activation_function(Z, name):
     if name == "sigmoid":
-        return derivative_sigmoid(matrix)
+        return derivative_sigmoid(Z)
     elif name == "RELU":
-        return derivative_RELU(matrix)
+        return derivative_RELU(Z)
     elif name == "tanh":
-        return derivative_tanh(matrix)
+        return derivative_tanh(Z)
     elif name == "identity":
-        return derivative_identity(matrix)
+        return derivative_identity(Z)
 
 
-def identity(matrix):
-    return matrix
+def identity(Z):
+    return Z
 
 
-def softmax(matrix):
-    return np.exp(matrix) / np.sum(np.exp(matrix), axis=0)
+def softmax(Z):
+    e_Z = np.exp(Z - np.max(Z))
+    return e_Z / e_Z.sum(axis=0)
 
 
-def sigmoid(matrix):
-    return 1.0 / (1 + np.exp(-matrix))
+def sigmoid(Z):
+    return np.where(Z >= 0, 1 / (1 + np.exp(-Z)), np.exp(Z) / (1 + np.exp(Z)))
 
 
-def RELU(matrix):
-    transformed_matrix = np.zeros(np.shape(matrix))
-    transformed_matrix[np.where(matrix > 0)] = matrix[np.where(matrix > 0)]
-    return transformed_matrix
+def RELU(Z):
+    transformed_Z = np.zeros(np.shape(Z))
+    transformed_Z[np.where(Z > 0)] = Z[np.where(Z > 0)]
+    return transformed_Z
 
 
-def tanh(matrix):
-    return (np.exp(matrix) - np.exp(-matrix)) / (
-        np.exp(matrix) + np.exp(-matrix)
-    )
+def tanh(Z):
+    return (np.exp(Z) - np.exp(-Z)) / (np.exp(Z) + np.exp(-Z))
 
 
-def derivative_identity(matrix):
-    return np.ones(np.shape(matrix))
+def derivative_identity(Z):
+    return np.ones(np.shape(Z))
 
 
-def derivative_sigmoid(matrix):
-    return np.exp(-matrix) / (1 + np.exp(-matrix)) / (1 + np.exp(-matrix))
+def derivative_sigmoid(Z):
+    sig = sigmoid(Z)
+    return sig * (1 - sig)
 
 
-def derivative_RELU(matrix):
-    derivative = np.zeros(np.shape(matrix))
-    derivative[np.where(matrix > 0)] = 1
+def derivative_RELU(Z):
+    derivative = np.zeros(np.shape(Z))
+    derivative[Z > 0] = 1
     return derivative
 
 
-def derivative_tanh(matrix):
-    return 1.0 / (np.cosh(matrix) * np.cosh(matrix))
+def derivative_tanh(Z):
+    t = tanh(Z)
+    return 1 - t**2

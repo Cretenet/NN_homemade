@@ -6,26 +6,26 @@ from neural_network import NeuralNetwork
 
 
 def test_bad_input():
-    NN = NeuralNetwork(2, "input layer")
-    NN.add_hidden_layer("first hidden layer", 2, "RELU")
-    NN.add_output_layer("output layer", 1, "sigmoid")
-    with raises(ValueError, match="Input must be a numpy array"):
-        NN.forward_propagation("not a numpy array")
-    with raises(ValueError, match="Input must be a numpy array"):
-        NN.forward_propagation([[0.5, -0.1], [0.7, 0.8]])
-    with raises(ValueError, match="Input array must be 2-dimensional"):
-        NN.forward_propagation(np.array([1, 2, 3]))
+    NN = NeuralNetwork(input_size=2)
+    NN.add_hidden_layer(nb_neurons=2, activation="RELU")
+    NN.add_output_layer(cost="MSE", nb_outputs=1, activation="sigmoid")
+    with raises(TypeError, match="X must be a numpy array"):
+        NN.forward_propagation(X="not a numpy array")
+    with raises(TypeError, match="X must be a numpy array"):
+        NN.forward_propagation(X=[[0.5, -0.1], [0.7, 0.8]])
+    with raises(ValueError, match="X must be 2-dimensional"):
+        NN.forward_propagation(X=np.array([1, 2, 3]))
     with raises(
         ValueError,
-        match="Input array must have as much rows as the input layer",
+        match="X must have as much rows as the input layer",
     ):
-        NN.forward_propagation(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
+        NN.forward_propagation(X=np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
 
 
 def test_fixed_values():
-    NN = NeuralNetwork(2, "input layer")
-    NN.add_hidden_layer("first hidden layer", 2, "RELU")
-    NN.add_output_layer("output layer", 1, "sigmoid")
+    NN = NeuralNetwork(input_size=2)
+    NN.add_hidden_layer(nb_neurons=2, activation="RELU")
+    NN.add_output_layer(cost="MSE", nb_outputs=1, activation="sigmoid")
     NN.weights[1] = np.array([[0.1, 0.2], [0.3, 0.4]])
     NN.weights[2] = np.array([[0.5, 0.6]])
     V = NN.forward_propagation(np.array([[0.5, -0.1], [0.7, 0.8]]))
@@ -33,11 +33,11 @@ def test_fixed_values():
 
 
 def test_large_random_network():
-    NN = NeuralNetwork(256, "input layer")
-    NN.add_hidden_layer("first hidden layer", 128, "RELU")
-    NN.add_hidden_layer("second hidden layer", 64, "tanh")
-    NN.add_hidden_layer("third hidden layer", 32, "sigmoid")
-    NN.add_output_layer("output layer", 5, "softmax")
+    NN = NeuralNetwork(input_size=256)
+    NN.add_hidden_layer(nb_neurons=128, activation="RELU")
+    NN.add_hidden_layer(nb_neurons=64, activation="tanh")
+    NN.add_hidden_layer(nb_neurons=32, activation="sigmoid")
+    NN.add_output_layer(cost="MSE", nb_outputs=5, activation="softmax")
     W1 = NN.weights[1]
     assert W1.shape == (128, 256)
     W2 = NN.weights[2]

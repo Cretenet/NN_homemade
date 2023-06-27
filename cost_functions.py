@@ -25,22 +25,30 @@ def MSE(Y, Yhat):
 
 
 def cross_entropy(Y, Yhat):
+    epsilon = 1e-15
+    Yhat = np.clip(Yhat, epsilon, 1.0 - epsilon)
     losses = np.sum(-Y * np.log(Yhat), axis=0)
     return np.sum(losses) / Y.shape[1]
 
 
 def binary_cross_entropy(Y, Yhat):
+    epsilon = 1e-15
+    Yhat = np.clip(Yhat, epsilon, 1.0 - epsilon)
     losses = np.sum(-Y * np.log(Yhat) - (1 - Y) * np.log(1 - Yhat), axis=0)
     return np.sum(losses) / Y.shape[1]
 
 
 def derivative_MSE(Y, Yhat):
-    return 2 * (Yhat - Y) / Y.shape[1]
+    return 2 * (Yhat - Y)
 
 
 def derivative_cross_entropy(Y, Yhat):
-    return -Y / Yhat / Y.shape[1]
+    epsilon = 1e-15
+    Yhat = np.clip(Yhat, epsilon, 1.0 - epsilon)
+    return -Y / Yhat
 
 
 def derivative_binary_cross_entropy(Y, Yhat):
-    return -Y / Yhat / Y.shape[1] + (1 - Y) / (1 - Yhat) / Y.shape[1]
+    epsilon = 1e-15
+    Yhat = np.clip(Yhat, epsilon, 1.0 - epsilon)
+    return -Y / Yhat + (1 - Y) / (1 - Yhat)
