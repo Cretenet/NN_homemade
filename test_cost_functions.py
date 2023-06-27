@@ -46,7 +46,8 @@ def test_derivative_MSE():
     Yhat_minus_2 = np.array([[0.5, 1.0 - epsilon]])
     derivative_2 = (MSE(Y, Yhat_plus_2) - MSE(Y, Yhat_minus_2)) / (2 * epsilon)
     assert np.allclose(
-        derivative_MSE(Y, Yhat), np.array([[derivative_1, derivative_2]])
+        derivative_MSE(Y, Yhat) / Y.shape[1],
+        np.array([[derivative_1, derivative_2]]),
     )
     assert np.allclose(
         derivative_cost_function(Y, Yhat, "MSE"), derivative_MSE(Y, Yhat)
@@ -68,7 +69,7 @@ def test_derivative_cross_entropy():
         cross_entropy(Y, Yhat_plus_2) - cross_entropy(Y, Yhat_minus_2)
     ) / (2 * epsilon)
     assert np.allclose(
-        derivative_cross_entropy(Y, Yhat),
+        derivative_cross_entropy(Y, Yhat) / Y.shape[1],
         np.array([[derivative_1, derivative_2]]),
     )
     assert np.allclose(
@@ -94,7 +95,7 @@ def test_derivative_binary_cross_entropy():
         - binary_cross_entropy(Y, Yhat_minus_2)
     ) / (2 * epsilon)
     assert np.allclose(
-        derivative_binary_cross_entropy(Y, Yhat),
+        derivative_binary_cross_entropy(Y, Yhat) / Y.shape[1],
         np.array([[derivative_1, derivative_2]]),
     )
     assert np.allclose(
