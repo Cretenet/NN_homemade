@@ -53,7 +53,7 @@ class NeuralNetwork:
         self.nbLayers = 0  # By convention, the input layer is not counted
         self.layers_size = [input_size]
         self.names = [input_layer_name]
-        self.activation_functions = []
+        self.activation_functions = ["identity"]
         self.output_layer_exists = False
         self.weights = {}
         self.biases = {}
@@ -216,6 +216,8 @@ class NeuralNetwork:
         epochs: int,
         lr: float,
         batch_size: int,
+        eval_size: float = 0.1,
+        verbose: bool = True,
     ):
         """
         Trains the neural network on a given dataset.
@@ -232,6 +234,11 @@ class NeuralNetwork:
             Learning rate for training.
         batch_size : int
             Size of the batches for training.
+        eval_size : float, optional
+            Proportion of the dataset to be used as validation set,
+            by default 0.1.
+        verbose : bool, optional
+            If true, prints progress logs, by default True.
         """
         # We first verify that the input has the right format
         if not isinstance(X, np.ndarray) or not isinstance(Y, np.ndarray):
@@ -255,21 +262,90 @@ class NeuralNetwork:
                 "batch_size must be lower than or equal to "
                 "the number of samples"
             )
+        # Initialize losses and accuracies
+        self.train_losses = []
+        self.train_accuracies = []
+        self.eval_losses = []
+        self.eval_accuracies = []
+        # We split the train and validation sets
+        X, Y = self.shuffle_dataset(X, Y)
+        X_train, Y_train, X_eval, Y_eval = self.split_dataset(X, Y, eval_size)
         # We then start the training
+        if verbose:
+            print("Training started ...")
         for epoch in range(epochs):
             # We shuffle the dataset
-            X, Y = self.shuffle_dataset(X, Y)
+            X_train, Y_train = self.shuffle_dataset(X_train, Y_train)
             # We divide the dataset into batches
-            X_batches, Y_batches = self.divide_batches(X, Y, batch_size)
+            X_batches, Y_batches = self.divide_batches(
+                X_train, Y_train, batch_size
+            )
             # We train the neural network on each batch
             for X_batch, Y_batch in zip(X_batches, Y_batches):
                 self.train_batch(X_batch, Y_batch, lr)
-            print(
-                f"Epoch {epoch + 1} / {epochs} completed, "
-                f"loss: {self.evaluate(Y=Y, Yhat=self.forward_propagation(X))}"
-                f" accuracy: "
-                f"{self.accuracy(Y=Y, Yhat=self.forward_propagation(X))}"
+            # We evaluate the neural network on the train and validation sets
+            train_loss = self.evaluate(
+                Y_train, self.forward_propagation(X_train)
             )
+            train_accuracy = self.accuracy(
+                Y_train, self.forward_propagation(X_train)
+            )
+            eval_loss = self.evaluate(Y_eval, self.forward_propagation(X_eval))
+            eval_accuracy = self.accuracy(
+                Y_eval, self.forward_propagation(X_eval)
+            )
+            if verbose:
+                print(
+                    f"Epoch {epoch + 1:02} / {epochs:02} completed, "
+                    f"train_loss: {train_loss: .2f}, "
+                    f"train_accuracy: {train_accuracy: .2f}, "
+                    f"eval_loss: {eval_loss: .2f}, "
+                    f"eval_accuracy: {eval_accuracy: .2f}."
+                )
+            # We save the losses and accuracies
+            self.train_losses.append(train_loss)
+            self.train_accuracies.append(train_accuracy)
+            self.eval_losses.append(eval_loss)
+            self.eval_accuracies.append(eval_accuracy)
+        if verbose:
+            print("Training completed.")
+        return (
+            self.train_losses,
+            self.train_accuracies,
+            self.eval_losses,
+            self.eval_accuracies,
+        )
+
+    def split_dataset(self, X: np.ndarray, Y: np.ndarray, eval_size: float):
+        """
+        Splits the input and output datasets into training and
+        evaluation sets based on the provided evaluation size.
+
+        Parameters
+        ----------
+        X : numpy.ndarray
+            Input of the neural network.
+        Y : numpy.ndarray
+            Output of the neural network.
+        eval_size : float
+            Proportion of the dataset to be used as evaluation set.
+
+        Returns
+        -------
+        X_train : numpy.ndarray
+            Training inputs.
+        Y_train : numpy.ndarray
+            Training outputs.
+        X_eval : numpy.ndarray
+            Evaluation inputs.
+        Y_eval : numpy.ndarray
+            Evaluation outputs.
+        """
+        X_train = X[:, : int((1 - eval_size) * X.shape[1])]
+        Y_train = Y[:, : int((1 - eval_size) * Y.shape[1])]
+        X_eval = X[:, int((1 - eval_size) * X.shape[1]) :]
+        Y_eval = Y[:, int((1 - eval_size) * Y.shape[1]) :]
+        return X_train, Y_train, X_eval, Y_eval
 
     def shuffle_dataset(self, X: np.ndarray, Y: np.ndarray):
         """
@@ -307,9 +383,9 @@ class NeuralNetwork:
 
         Returns
         -------
-        numpy.ndarray
+        list(numpy.ndarray)
             Input batches.
-        numpy.ndarray
+        list(numpy.ndarray)
             Output batches.
         """
         nb_batches = X.shape[1] // batch_size
@@ -442,7 +518,7 @@ class NeuralNetwork:
             Learning rate for training.
         """
         # We first verify that lr has the right format
-        if not isinstance(lr, float):
+        if not (isinstance(lr, float) or isinstance(lr, int)):
             raise TypeError("lr must be a float")
         if lr <= 0:
             raise ValueError("lr must be a strictly positive float")

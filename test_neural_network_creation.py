@@ -9,7 +9,9 @@ def test_init_positive_integer_input():
     assert NN.nbLayers == 0, "Incorrect number of layers"
     assert NN.layers_size == [5], "Incorrect layers size"
     assert NN.names == ["input_layer"], "Incorrect layer name"
-    assert NN.activation_functions == [], "Incorrect activation functions"
+    assert NN.activation_functions == [
+        "identity"
+    ], "Incorrect activation functions"
     assert not NN.output_layer_exists, "Output layer exists"
     assert NN.weights == {}, "Weights not empty"
     assert NN.biases == {}, "Biases not empty"
@@ -43,7 +45,7 @@ def test_add_hidden_layer():
     assert NN.nbLayers == 1
     assert NN.layers_size == [5, 4]
     assert NN.names == ["input_layer", "first_hidden_layer"]
-    assert NN.activation_functions == ["RELU"]
+    assert NN.activation_functions == ["identity", "RELU"]
 
 
 def test_add_hidden_layer_zero_neurons():
@@ -91,7 +93,7 @@ def test_add_output_layer():
     assert NN.nbLayers == 1
     assert NN.layers_size == [5, 2]
     assert NN.names == ["input_layer", "output"]
-    assert NN.activation_functions == ["RELU"]
+    assert NN.activation_functions == ["identity", "RELU"]
 
 
 def test_add_output_layer_bad_nb_outputs():

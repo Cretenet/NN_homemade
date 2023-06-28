@@ -54,6 +54,7 @@ def test_regression():
 def gradient_checking(
     nb_outputs, hidden_activations, output_activations, costs
 ):
+    np.random.seed(0)  # for reproducibility
     epsilon = 1e-7
     nb_samples = 10
     nb_inputs = 128
