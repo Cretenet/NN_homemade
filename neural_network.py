@@ -52,15 +52,13 @@ class NeuralNetwork:
             raise ValueError("input_size must be a positive integer")
         self.nbLayers = 0  # By convention, the input layer is not counted
         self.layers_size = [input_size]
-        self.input_size = input_size
         self.names = [input_layer_name]
-        self.activation_functions = ["identity"]
+        self.activation_functions = []
         self.output_layer_exists = False
         self.weights = {}
         self.biases = {}
         self.activation = {}
         self.Z = {}
-        self.derivative_activation = {}
         self.db = {}  # Gradient of the loss function w.r.t the biases
         self.dW = {}  # Gradient of the loss function w.r.t the weights
 
@@ -240,7 +238,7 @@ class NeuralNetwork:
             raise TypeError("X and Y must be numpy arrays")
         if X.ndim != 2 or Y.ndim != 2:
             raise ValueError("X and Y must be 2-dimensional")
-        if X.shape[0] != self.input_size:
+        if X.shape[0] != self.layers_size[0]:
             raise ValueError("X must have as much rows as the input layer")
         if Y.shape[0] != self.layers_size[-1]:
             raise ValueError("Y must have as much rows as the output layer")
@@ -337,7 +335,7 @@ class NeuralNetwork:
             raise TypeError("X and Y must be numpy arrays")
         if X.ndim != 2 or Y.ndim != 2:
             raise ValueError("X and Y must be 2-dimensional")
-        if X.shape[0] != self.input_size:
+        if X.shape[0] != self.layers_size[0]:
             raise ValueError("X must have as much rows as the input layer")
         if Y.shape[0] != self.layers_size[-1]:
             raise ValueError("Y must have as much rows as the output layer")
@@ -369,7 +367,7 @@ class NeuralNetwork:
             raise TypeError("X must be a numpy array")
         if X.ndim != 2:
             raise ValueError("X must be 2-dimensional")
-        if X.shape[0] != self.input_size:
+        if X.shape[0] != self.layers_size[0]:
             raise ValueError("X must have as much rows as the input layer")
         # Start the propagation
         first_layer = X
